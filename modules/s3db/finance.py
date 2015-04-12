@@ -1,5 +1,6 @@
 __all__ = ["FinanceDonations",
-           "CustomIncome"
+           "IncomeType",
+		   "IncomeDetails"
            ]
 
 from gluon import *
@@ -35,12 +36,15 @@ class FinanceDonations(S3Model):
 							)
 			
 			self.configure(tablename,
-						   listadd=True)
+						   listadd=True,
+						   realm_components = ("incomedetails"))
 						   
 			finance_donations_id = S3ReusableField("finance_donations_id", table,
                                                label = T("Finance Donations"),
                                                requires = IS_NULL_OR(IS_ONE_OF(db,
                                                                      "finance_donations.id")))
+																	 
+			
 
 																	 
 			# Pass names back to global scope (s3.*)
@@ -50,27 +54,75 @@ class FinanceDonations(S3Model):
 	
 #==============================================================================================================================
 
-class CustomIncome(S3Model):
-	names = ["finance_customincome"]
+class IncomeType(S3Model):
+
+	names = ["finance_incometype",
+			"finance_incometype_id",
+			]
 	
 	def model(self):
 		db = current.db
 		T = current.T
 		settings = current.deployment_settings
+	
 		
-		tablename = "finance_customincome"
+		tablename = "finance_incometype"
 		table=self.define_table(tablename,
-							Field("name", label=T("Income Name"),),
-							Field("person", label=T("Person In charge")),
-							Field("amount", "double", label=T("Amount"),
-									default=0.00, 
-									requires = IS_FLOAT_AMOUNT(),
-									),
-							s3_currency(required=True),
+								Field("name", label=T("Name")),
+								
+							)
+		#Reuasable Field
+		represent=S3Represent(lookup=tablename, translate=True)
+		incometype_id = S3ReusableField("incometype_id", "reference %s" % tablename,
+                                               label = T("Income Type"),
+											   sortby="name",
+											   represent=represent,
+                                               requires = IS_EMPTY_OR(IS_ONE_OF(db,
+                                                                      "finance_incometype.id", represent)))
+
+		self.configure(tablename,
+						listadd=True,
+						 )
+		self.add_components(tablename,
+							finance_incomedetails="incometype_id"
+													#{"name" : "details",
+													#"joinby" : "incometype_id",
+													#"multiple" : True}													}
+													)				 
+		
+						
+		return dict(finance_incometype_id=incometype_id)
+		
+#============================================================================================================================
+class IncomeDetails(S3Model):
+
+	names = ["finance_incomedetails",
+			"finance_incomedetails_id",
+			]
+	
+	def model(self):
+		db = current.db
+		T = current.T
+		settings = current.deployment_settings
+	
+		
+		tablename = "finance_incomedetails"
+		table=self.define_table(tablename,
+								self.finance_incometype_id(),
+								Field("amount", label=T("Amount")),
+								Field("person", label=T("Contact Person"))
 							)
 			
 		self.configure(tablename,
-						   listadd=True)
-						   
-		return dict()
+						listadd=True,
+						)
 		
+		#Reusable Field
+		represent=S3Represent(lookup=tablename, translate=True)
+		incomedetails_id = S3ReusableField("incomedetails_id", "reference %s" % tablename,
+                                               represent=represent,
+                                               requires = IS_EMPTY_OR(IS_ONE_OF(db,
+                                                                      "finance_incomedetails.id", represent)))
+		
+		return dict(finance_incomedetails_id=incomedetails_id)
+#============================================================================================================================
