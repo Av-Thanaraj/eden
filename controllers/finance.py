@@ -1,10 +1,12 @@
 from s3.s3data import S3DataTable
 from s3.s3resource import S3Resource
+from s3.s3query import S3FieldSelector
 
 
 def donations():
 
 	s3db.set_method("finance", "donations", method="total", action=donations_total)
+	
 	
 	return s3_rest_controller()
 	
@@ -38,6 +40,10 @@ def donations_total(r, **attr):
 #---------------------------------------------------------------------------------------------------------------------------	
 
 def incomedetails():
+	
+	s3db.set_method("finance", "incomedetails", method="total", action=incomedetails_total)
+	
+	
 	return s3_rest_controller()
 
 s3.crud_strings["finance_incomedetails"] = Storage(
@@ -63,7 +69,8 @@ def incometype_rheader(r, tabs=[]):
 		# List or Create form: rheader makes no sense here
 		return None
 	tabs = [(T("Basic Details"), None),
-			(T("Income Details"), "incomedetails")]
+			(T("Income Details"), "incomedetails"),
+			(T("Total"),"total"),]
 	rheader_tabs = s3_rheader_tabs(r, tabs)
 	incometype = r.record
 	rheader = DIV(TABLE(
@@ -74,6 +81,9 @@ def incometype_rheader(r, tabs=[]):
 
 #---------------------------------------------------------------------------------------------------------------------------
 def incometype():
+
+	s3db.set_method("finance", "incometype", method="total", action=incometype_total)
+	
 	return s3_rest_controller(rheader=incometype_rheader)
 	
 s3.crud_strings["finance_incometype"] = Storage(
@@ -91,7 +101,42 @@ msg_record_deleted = T("Income Type deleted"),
 msg_list_empty = T("No Income Types currently registered"))	
 	
 #-------------------------------------------------------------------------------------------------------------------------
-
-
+"""Method to calculate total income if all income types"""
+def incomedetails_total(r, **attr):
 	
+	table = current.s3db.finance_incomedetails
+	tot = table.amount.sum()
+	output = current.db().select(tot).first()[tot] or \
+			current.messages["NONE"]
+	return dict(output=output)
 	
+#--------------------------------------------------------------------------------------------------------------------------
+"""Method to calculate total income"""
+def totalincome():
+	
+	table1 = current.s3db.finance_incomedetails
+	table2 = current.s3db.finance_donations
+	tot1 = table1.amount.sum()
+	tot2 = table2.amount.sum()
+	output1 = current.db().select(tot1).first()[tot1] or \
+			current.messages["NONE"]
+	output2 = current.db().select(tot2).first()[tot2] or \
+			current.messages["NONE"]
+	output = output1 + output2
+	return dict(output=output)
+#---------------------------------------------------------------------------------------------------------------------------
+
+"""Method to calculate total income of a particular income type"""
+def incometype_total(r, **attr):
+		
+	resource = s3db.resource("finance_incometype")
+	table = current.s3db.finance_incometype
+	query = (db.finance_incometype.id == r.id) & (db.finance_incomedetails.incometype_id == db.finance_incometype.id)
+	component = resource.components["incomedetails"]
+	join = component.get_join()
+	query&=join
+	tot = current.s3db.finance_incomedetails.amount.sum()
+	output = current.db(query).select(tot).first()[tot] or \
+			current.messages["NONE"]
+	return dict(output=output)	
+#---------------------------------------------------------------------------------------------------------------------------

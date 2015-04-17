@@ -1,6 +1,7 @@
 __all__ = ["FinanceDonations",
            "IncomeType",
-		   "IncomeDetails"
+		   "IncomeDetails",
+		   "Income"
            ]
 
 from gluon import *
@@ -28,9 +29,9 @@ class FinanceDonations(S3Model):
 			tablename = "finance_donations"
 			table=self.define_table(tablename,
 							Field("donar", label=T("Donar"),),
-							Field("amount", "double", label=T("Amount"),
-									default=0.00, 
-									requires = IS_FLOAT_AMOUNT(),
+							Field("amount", "integer", label=T("Amount"),
+									#default=0.00, 
+									#requires = IS_FLOAT_AMOUNT(),
 									),
 							s3_currency(required=True),
 							)
@@ -69,7 +70,8 @@ class IncomeType(S3Model):
 		tablename = "finance_incometype"
 		table=self.define_table(tablename,
 								Field("name", label=T("Name")),
-								
+								#Field.Method("total",
+								#				self.incometype_total),
 							)
 		#Reuasable Field
 		represent=S3Represent(lookup=tablename, translate=True)
@@ -88,10 +90,29 @@ class IncomeType(S3Model):
 													#{"name" : "details",
 													#"joinby" : "incometype_id",
 													#"multiple" : True}													}
-													)				 
+													)
+
+		
 		
 						
 		return dict(finance_incometype_id=incometype_id)
+"""		
+def incometype_total(row):
+       
+
+	if "finance_incometype" in row:
+		incometype_id = row["finance_incometype.id"]
+	elif "id" in row:
+		incometype_id = row["id"]
+	else:
+		return 0
+
+	table = current.s3db.finance_incomedetails
+	query = (table.deleted != True) & \
+			(table.incometype_id == incometype_id)
+	sum_field = table.amount.sum()
+	return current.db(query).select(sum_field).first()[sum_field] or \
+				   current.messages["NONE"]"""
 		
 #============================================================================================================================
 class IncomeDetails(S3Model):
@@ -126,3 +147,22 @@ class IncomeDetails(S3Model):
 		
 		return dict(finance_incomedetails_id=incomedetails_id)
 #============================================================================================================================
+
+class Income(S3Model):
+	names = ["finance_income",
+			
+			]
+	
+	def model(self):
+		db = current.db
+		T = current.T
+		settings = current.deployment_settings
+		
+		tablename = "finance_income"
+		table = self.define_table(tablename,
+									)
+		
+		self.configure(tablename)
+		
+		return dict()
+	
